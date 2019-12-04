@@ -23,7 +23,7 @@ db: mysql
  
  `php artisan db:seed` - seed tables with faked data (10 authors, 10 categories, 50 books randomly relying upon created authors and categories)
  
- #Usage
+# Usage
  
  Retrieving single item data:
  
