@@ -57,6 +57,25 @@ db: mysql
  DELETE `/test-api/author/2`
   
  DELETE `/test-api/category/2`
+ 
+ Querying filtering params(example):
+ 
+ GET `/test-api/book?order={"column":"name","dir":"desc"}&search={"first_name":"Aryanna","name":"category_WLFJHP","title":"TITLE"}&page=1&size=6`
   
+ order param - define column and direction, in form: `{"column":"name","dir":"desc"}`
   
+ or
+ 
+ `{"column":"name","dir":"DESC"}`
+ 
+ search param - define column-value pair for each desired search, in form: 
+ 
+ `{"first_name":"Aryanna","name":"category_WLFJHP","title":"TITLE"}`
+ 
+ 
+ or
+ 
+ `{"id":2,"name":"category_WLFJHP","title":"TITLE"}`
+ 
+ page & size params - define desired page and page size for pagination logic, by default(if not provided in query) assumed page=1, size=10
  
