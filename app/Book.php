@@ -27,7 +27,7 @@ class Book extends Model implements IModelQueable
 
     public static function processQueryParameters(array $params)
     {
-        $query = self::query()->select(['books.id','books.title','authors.name_prefix','authors.first_name','authors.last_name','categories.name'])
+        $query = self::query()->select(['books.id','books.title','books.author_id', 'books.category_id','authors.name_prefix','authors.first_name','authors.last_name','categories.name'])
             ->leftJoin('authors', 'authors.id', '=', 'books.author_id')
             ->leftJoin('categories', 'categories.id', '=', 'books.category_id');
         //used JOINs because they are faster then laravel native relations(they make additional sub-query for existence checking)
