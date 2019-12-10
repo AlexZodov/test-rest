@@ -5,11 +5,22 @@ namespace App\Http\Controllers;
 use App\Author;
 use App\Http\Requests\Author\Create;
 use App\Http\Requests\Author\Update;
+use App\Resources\AuthorResource;
+use App\Resources\AuthorsResource;
+use App\Services\AuthorService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 class AuthorController extends Controller
 {
+
+    private $service;
+
+    public function __construct(AuthorService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -17,16 +28,21 @@ class AuthorController extends Controller
      * @param \App\Author
      * @return \Illuminate\Http\JsonResponse
      */
-    public function index(Request $request, Author $author)
+    public function index(Request $request)
     {
         $queryParameters = $this->composeQueryParameters($request);
-        $result = $author::processQueryParameters($queryParameters)->get();
+
+        $result = $this->service->parametrizedResult(
+            $queryParameters['search'],
+            $queryParameters['order'],
+            $queryParameters['start'],
+            $queryParameters['length']);
 
         return response()->json([
             'success' => true,
-            'data' => json_encode($result),
+            'data' => json_encode(AuthorsResource::make($result)),
             'items_filtered' => count($result),
-            'items_total' => $author::count(),
+            'items_total' => $this->service->getCount(),
             'parameters' => json_encode($queryParameters),
             'message' => 'result authors',
             'code' => Response::HTTP_OK,
@@ -42,7 +58,7 @@ class AuthorController extends Controller
      */
     public function store(Create $request)
     {
-        $author = Author::store($request->all());
+        $author = $this->service->create($request->all());
 
         if ($author === false || blank($author)) {
             return response()->json([
@@ -66,8 +82,10 @@ class AuthorController extends Controller
      */
     public function show(Author $author)
     {
+        $this->service->setInstance($author); //setting already fetched instance into repository, so Laravel didn`t do it without purpose
+
         return response()->json([
-            'data' => $author->toArray(),
+            'data' => AuthorResource::make($this->service->find()),
             'success' => true,
             'message' => 'found',
             'code' => Response::HTTP_OK,
@@ -84,7 +102,10 @@ class AuthorController extends Controller
      */
     public function update(Update $request, Author $author)
     {
-        $result = $author->update($request->all());
+
+        $this->service->setInstance($author); //setting already fetched instance into repository, so Laravel didn`t do it without purpose
+
+        $result = $this->service->update($request->all());
 
         if ($result === false || blank($result)) {
             return response()->json([
@@ -108,7 +129,10 @@ class AuthorController extends Controller
      */
     public function destroy(Author $author)
     {
-        $result = $author->delete();
+
+        $this->service->setInstance($author); //setting already fetched instance into repository, so Laravel didn`t do it without purpose
+
+        $result = $this->service->destroy();
 
         if ($result === false || blank($result)) {
             return response()->json([

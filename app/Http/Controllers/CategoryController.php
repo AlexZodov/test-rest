@@ -4,11 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Category;
 use App\Http\Requests\Category\Create;
+use App\Resources\CategoriesResource;
+use App\Resources\CategoryResource;
+use App\Services\CategoryService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 class CategoryController extends Controller
 {
+
+    private $service;
+
+    public function __construct(CategoryService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -19,13 +30,17 @@ class CategoryController extends Controller
     public function index(Request $request, Category $category)
     {
         $queryParameters = $this->composeQueryParameters($request);
-        $result = $category::processQueryParameters($queryParameters)->get();
+        $result = $this->service->parametrizedResult(
+            $queryParameters['search'],
+            $queryParameters['order'],
+            $queryParameters['start'],
+            $queryParameters['length']);
 
         return response()->json([
             'success' => true,
-            'data' => json_encode($result),
+            'data' => json_encode(CategoriesResource::make($result)),
             'items_filtered' => count($result),
-            'items_total' => $category::count(),
+            'items_total' => $this->service->getCount(),
             'parameters' => json_encode($queryParameters),
             'message' => 'result categories',
             'code' => Response::HTTP_OK,
@@ -41,7 +56,7 @@ class CategoryController extends Controller
      */
     public function store(Create $request)
     {
-        $category = Category::store($request->all());
+        $category = $this->service->create($request->all());
 
         if ($category === false || blank($category)) {
             return response()->json([
@@ -65,8 +80,10 @@ class CategoryController extends Controller
      */
     public function show(Category $category)
     {
+        $this->service->setInstance($category); //setting already fetched instance into repository, so Laravel didn`t do it without purpose
+
         return response()->json([
-            'data' => $category->toArray(),
+            'data' => CategoryResource::make($this->service->find()),
             'success' => true,
             'message' => 'found',
             'code' => Response::HTTP_OK,
@@ -83,7 +100,9 @@ class CategoryController extends Controller
      */
     public function update(Request $request, Category $category)
     {
-        $result = $category->update($request->all());
+        $this->service->setInstance($category); //setting already fetched instance into repository, so Laravel didn`t do it without purpose
+
+        $result = $this->service->update($request->all());
 
         if ($result === false || blank($result)) {
             return response()->json([
@@ -108,7 +127,9 @@ class CategoryController extends Controller
      */
     public function destroy(Category $category)
     {
-        $result = $category->delete();
+        $this->service->setInstance($category); //setting already fetched instance into repository, so Laravel didn`t do it without purpose
+
+        $result = $this->service->destroy();
 
         if ($result === false || blank($result)) {
             return response()->json([

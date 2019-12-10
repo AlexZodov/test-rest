@@ -5,13 +5,24 @@ namespace App\Http\Controllers;
 use App\Book;
 use App\Http\Requests\Book\Create;
 use App\Http\Requests\Book\Update;
-use App\Interfaces\IModelQueable;
+use App\Resources\BookResource;
+use App\Resources\BooksResource;
+use App\Services\BookService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 class BookController extends Controller
 {
+
+    private $service;
+
+    public function __construct(BookService $service)
+    {
+        $this->service = $service;
+    }
+
+
     /**
      * Display a listing of the resource.
      * @param \Illuminate\Http\Request
@@ -21,13 +32,18 @@ class BookController extends Controller
     public function index(Request $request, Book $book)
     {
         $queryParameters = $this->composeQueryParameters($request);
-        $result = $book::processQueryParameters($queryParameters)->get();
+
+        $result = $this->service->parametrizedResult(
+            $queryParameters['search'],
+            $queryParameters['order'],
+            $queryParameters['start'],
+            $queryParameters['length']);
 
         return response()->json([
             'success' => true,
-            'data' => json_encode($result),
+            'data' => json_encode(BooksResource::make($result)),
             'items_filtered' => count($result),
-            'items_total' => $book::count(),
+            'items_total' => $this->service->getCount(),
             'parameters' => json_encode($queryParameters),
             'message' => 'result books',
             'code' => Response::HTTP_OK,
@@ -44,8 +60,7 @@ class BookController extends Controller
      */
     public function store(Create $request)
     {
-        //
-        $book = Book::store($request->all());
+        $book = $this->service->create($request->all());
 
         if ($book === false || blank($book)) {
             return response()->json([
@@ -69,8 +84,11 @@ class BookController extends Controller
      */
     public function show(Book $book)
     {
+
+        $this->service->setInstance($book); //setting already fetched instance into repository, so Laravel didn`t do it without purpose
+
         return response()->json([
-            'data' => $book->toArray(),
+            'data' => BookResource::make($this->service->find()),
             'success' => true,
             'message' => 'found',
             'code' => Response::HTTP_OK,
@@ -86,7 +104,9 @@ class BookController extends Controller
      */
     public function update(Update $request, Book $book)
     {
-        $result = $book->update($request->only(['category_id'])); //if system should update only category of book, not clear from task, otherwise - just do $request->all()
+        $this->service->setInstance($book); //setting already fetched instance into repository, so Laravel didn`t do it without purpose
+
+        $result = $this->service->update($request->only(['category_id'])); //if system should update only category of book, not clear from task, otherwise - just do $request->all()
 
         if ($result === false || blank($result)) {
             return response()->json([
@@ -110,7 +130,9 @@ class BookController extends Controller
      */
     public function destroy(Book $book)
     {
-        $result = $book->delete();
+        $this->service->setInstance($book); //setting already fetched instance into repository, so Laravel didn`t do it without purpose
+
+        $result = $this->service->destroy();
 
         if ($result === false || blank($result)) {
             return response()->json([
